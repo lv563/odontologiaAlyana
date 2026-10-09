@@ -1,0 +1,56 @@
+# Blueprint de Render: con esto, "New + → Blueprint" en Render detecta y crea los dos
+# servicios (API + frontend) de una vez. Los valores marcados "sync: false" los pide
+# Render en el dashboard al crear el servicio (así ningún secreto queda en el repo).
+services:
+  - type: web
+    name: odontoalyana-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__Default
+        sync: false
+      - key: Jwt__Key
+        sync: false
+      - key: Jwt__Issuer
+        value: OdontoAlyana
+      - key: Jwt__Audience
+        value: OdontoAlyana.Clients
+      - key: Cors__Origins__0
+        sync: false
+      - key: AdminSeed__FullName
+        value: Dra. Alyana
+      - key: AdminSeed__Email
+        sync: false
+      - key: AdminSeed__Password
+        sync: false
+      - key: Email__Host
+        value: smtp.resend.com
+      - key: Email__Port
+        value: "587"
+      - key: Email__User
+        value: resend
+      - key: Email__Password
+        sync: false
+      - key: Email__FromAddress
+        value: onboarding@resend.dev
+      - key: Email__FromName
+        value: Odonto Alyana
+      - key: Email__EnableSsl
+        value: "true"
+      - key: Email__AdminEmail
+        sync: false
+
+  - type: web
+    name: odontoalyana-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    plan: free
+    envVars:
+      - key: VITE_API_URL
+        sync: false

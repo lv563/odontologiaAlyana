@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:17
+    container_name: odontoalyana-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: odontoalyana
+      POSTGRES_USER: odonto
+      POSTGRES_PASSWORD: odonto_dev
+    ports:
+      - "5433:5432" # 5432 lo ocupa un PostgreSQL nativo ya instalado en esta máquina
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odonto -d odontoalyana"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
