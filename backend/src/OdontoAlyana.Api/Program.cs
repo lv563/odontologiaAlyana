@@ -10,7 +10,9 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddJwtAuth(builder.Configuration);
 
-var origins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? [];
+var origins = (builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? [])
+    .Select(o => o.Trim().TrimEnd('/'))
+    .ToArray();
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod()));
 
