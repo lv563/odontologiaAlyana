@@ -54,7 +54,16 @@ public class AppointmentReminderJob(
             .ToListAsync(ct);
 
         foreach (var id in pending)
-            await appointmentService.SendReminderAsync(id, ct);
+        {
+            try
+            {
+                await appointmentService.SendReminderAsync(id, ct);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "No se pudo enviar el recordatorio de la cita {AppointmentId}", id);
+            }
+        }
 
         if (pending.Count > 0)
             logger.LogInformation("Recordatorios por correo enviados: {Count}", pending.Count);

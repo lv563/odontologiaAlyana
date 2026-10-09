@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OdontoAlyana.Application.Abstractions;
 using OdontoAlyana.Application.Dtos;
@@ -22,7 +23,8 @@ public class AppointmentResult
 public class AppointmentService(
     AppDbContext db,
     IEmailSender emailSender,
-    IOptions<EmailOptions> emailOptions)
+    IOptions<EmailOptions> emailOptions,
+    ILogger<AppointmentService> logger)
 {
     private readonly EmailOptions _emailOptions = emailOptions.Value;
 
@@ -79,23 +81,39 @@ public class AppointmentService(
         return AppointmentResult.Ok(ToDto(appointment, treatment, patient));
     }
 
+    /// <summary>La cita ya quedó guardada en la base de datos antes de llamar esto: un fallo de
+    /// correo (ej. restricción de sandbox del proveedor de email) no debe tumbar la reserva.</summary>
     private async Task NotifyNewAppointmentAsync(Identity.ApplicationUser patient, Treatment treatment, Appointment appointment, CancellationToken ct)
     {
         var when = $"{appointment.Date:dddd dd/MM/yyyy} a las {appointment.StartTime:hh\\:mm}";
 
-        await emailSender.SendAsync(
-            patient.Email!,
-            "Confirmación de tu cita - Odonto Alyana",
-            $"<p>Hola {patient.FullName},</p><p>Tu cita para <strong>{treatment.Name}</strong> quedó agendada para el {when}.</p><p>Te esperamos.</p>",
-            ct: ct);
+        try
+        {
+            await emailSender.SendAsync(
+                patient.Email!,
+                "Confirmación de tu cita - Odonto Alyana",
+                $"<p>Hola {patient.FullName},</p><p>Tu cita para <strong>{treatment.Name}</strong> quedó agendada para el {when}.</p><p>Te esperamos.</p>",
+                ct: ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "No se pudo enviar el correo de confirmación al paciente {PatientId}", patient.Id);
+        }
 
         if (!string.IsNullOrWhiteSpace(_emailOptions.AdminEmail))
         {
-            await emailSender.SendAsync(
-                _emailOptions.AdminEmail,
-                "Nueva cita reservada",
-                $"<p>{patient.FullName} ({patient.Email}, {patient.PhoneNumber}) reservó <strong>{treatment.Name}</strong> el {when}.</p>",
-                ct: ct);
+            try
+            {
+                await emailSender.SendAsync(
+                    _emailOptions.AdminEmail,
+                    "Nueva cita reservada",
+                    $"<p>{patient.FullName} ({patient.Email}, {patient.PhoneNumber}) reservó <strong>{treatment.Name}</strong> el {when}.</p>",
+                    ct: ct);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "No se pudo enviar el aviso de nueva cita al admin para la cita {AppointmentId}", appointment.Id);
+            }
         }
     }
 

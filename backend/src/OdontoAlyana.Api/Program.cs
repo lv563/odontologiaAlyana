@@ -15,7 +15,6 @@ var origins = (builder.Configuration.GetSection("Cors:Origins").Get<string[]>() 
     .ToArray();
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod()));
-Console.WriteLine($"[CORS-DEBUG] origins count={origins.Length} values=[{string.Join(", ", origins.Select(o => $"'{o}'"))}]");
 
 var app = builder.Build();
 
